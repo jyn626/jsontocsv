@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Text.Json.Nodes;
 
 class Program {
     public static bool isRootAnArray(string json)
@@ -40,6 +40,20 @@ class Program {
             return false;
         }
     }
+
+    public static List<string> getHeaders(string stringJson) {
+        // parse json into a JsonObject
+        JsonObject parsedJson = JsonNode.Parse(stringJson).AsObject();
+        List<string> headers = new List<string> { };
+
+        // loop through it and append every key in the headers list
+        foreach (var property in parsedJson) {
+            headers.Add(property.Key);
+        }
+
+        return headers;
+    }
+
     public static void Main(string[] args) {
         Console.Write("Current Directory: ");
         Console.Write(Directory.GetCurrentDirectory());
@@ -60,19 +74,32 @@ class Program {
 
         try
         {
-            // parse JSON
-            var serialized = JsonSerializer.Serialize(fileContent);
-        
+            // parsing JSON,
+            // i misunderstood these methods so im commenting it out.
+            //  1. JsonNode.Parse converts a JSON string into a mutable, readable DOM object.
+            //  2. JsonSerializer.Serialize converts a C# object into a JSON string
+
+            //var serialized = JsonSerializer.Serialize(fileContent);
+            //var parsedJson = JsonNode.Parse(fileContent).AsObject();
+
             // print out contents
             Console.WriteLine(fileContent);
 
-            // TODO: before serializing check for any unsuporrted JSON formats (nested objects/arrays, ...)
-            // and send an error message.
-            Console.WriteLine("----Serialized----");
-            Console.WriteLine(serialized);
 
-            Console.WriteLine("---isRootAnArray---");
-            Console.WriteLine(isRootAnArray(fileContent));
+            Console.WriteLine(getHeaders(fileContent));
+
+
+            // TODO: before parsing check for any unsuporrted JSON
+            // formats (nested objects/arrays, ...) and send an error message.
+            //Console.WriteLine("---- Parsed JSON ----");
+            //Console.WriteLine(parsedJson);
+
+
+            // Create a list of column names(headers)
+            
+
+            //Console.WriteLine("---isRootAnArray---");
+            //Console.WriteLine(isRootAnArray(fileContent));
         } catch(JsonException e) {
             // Captures JSON formatting, depth limits, or conversion issues
             Console.WriteLine($"JSON invalid: {e.Message}"); 
