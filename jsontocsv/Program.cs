@@ -1,6 +1,46 @@
 ﻿using System.Text.Json;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 class Program {
+    public static bool isRootAnArray(string json)
+    {
+        try
+        {
+
+            //  `using` acts as a lifetime-limiting control structure ensuring
+            //  that the object's .Dispose() method is immediately triggered
+            //  the moment the code leaves that block
+            using (JsonDocument jsonDom = JsonDocument.Parse(json))
+            {
+                // get root of the json
+                JsonElement root = jsonDom.RootElement;
+
+                // verify if the root is an array
+                if (root.ValueKind != JsonValueKind.Array) {
+                    return false;
+                }
+
+                // check if all elements in the array are all objects
+                foreach (JsonElement element in root.EnumerateArray()) 
+                {
+                    if (element.ValueKind != JsonValueKind.Object) {
+                        return false;
+                    }
+                }
+
+            }
+            // the JsonDocument library is automatically CLOSED
+            // and disposed right here, even if errors occur above.
+            return true;
+
+        }
+        catch (JsonException e)
+        {
+            Console.WriteLine($"JSON invalid: {e.Message}");
+            Console.WriteLine($"Path: {e.Path}");
+            return false;
+        }
+    }
     public static void Main(string[] args) {
         Console.Write("Current Directory: ");
         Console.Write(Directory.GetCurrentDirectory());
@@ -28,6 +68,9 @@ class Program {
             Console.WriteLine(fileContent);
             Console.WriteLine("----Serialized----");
             Console.WriteLine(serialized);
+
+            Console.WriteLine("---isRootAnArray---");
+            Console.WriteLine(isRootAnArray(fileContent));
         } catch(JsonException e) {
             // Captures JSON formatting, depth limits, or conversion issues
             Console.WriteLine($"JSON invalid: {e.Message}"); 
