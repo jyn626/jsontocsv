@@ -6,7 +6,6 @@ class Program {
     {
         try
         {
-
             //  `using` acts as a lifetime-limiting control structure ensuring
             //  that the object's .Dispose() method is immediately triggered
             //  the moment the code leaves that block
@@ -66,6 +65,9 @@ class Program {
         
             // print out contents
             Console.WriteLine(fileContent);
+
+            // TODO: before serializing check for any unsuporrted JSON formats (nested objects/arrays, ...)
+            // and send an error message.
             Console.WriteLine("----Serialized----");
             Console.WriteLine(serialized);
 
