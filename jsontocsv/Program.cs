@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Data;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 class Program {
@@ -42,17 +43,75 @@ class Program {
     }
 
     public static List<string> getHeaders(string stringJson) {
+        // ! TODO: handle exceptions -> ArgumentOutOfRangeException, InvalidOperationException, others...
         // parse json into a JsonObject
-        JsonObject parsedJson = JsonNode.Parse(stringJson).AsObject();
+        //JsonObject parsedJson = JsonNode.Parse(stringJson).AsObject();
         List<string> headers = new List<string> { };
 
-        // loop through it and append every key in the headers list
-        foreach (var property in parsedJson) {
-            headers.Add(property.Key);
-        }
+        using (JsonDocument jsonDom = JsonDocument.Parse(stringJson)) {
+            var root = jsonDom.RootElement;
 
+            // if the json file is just a single object {}
+            // then do:
+            if (root.ValueKind == JsonValueKind.Object) 
+            {
+                // JsonNode.Parse -> converts a JSON string directly into a JsonObject, which allows to manipulate the data as a key-value pair collection.
+                JsonObject parsedJson = JsonNode.Parse(stringJson).AsObject();
+
+                // iterate through to the json object and add its Key (headers)
+                foreach (var property in parsedJson) {
+                    headers.Add(property.Key);
+                }
+                return headers;
+            }
+
+            // suppose stringJson is an [] (array) of JSONs we get the first object's keys/headers
+            var firstObject = root[0]; // the first object from the array (root element)
+
+            // EnumerateObject() -> converts a JSON object into a searchable, loopable collection of key - value properties.
+            foreach (JsonProperty property in firstObject.EnumerateObject()) {
+                headers.Add(property.Name);
+            }
+
+        }
         return headers;
+
     }
+
+    public static List<List<string>>  createRows(List<string> headers, string stringJson) {
+        List<List<string>> rows = new();
+        using(var jsonDoc = JsonDocument.Parse(stringJson)) {
+            if (!isRootAnArray(stringJson)) {
+                var jsonObj = jsonDoc.RootElement;
+                List<string> row = new();
+
+                foreach (string header in headers) {
+                    string property = jsonObj.GetProperty(header).ToString();
+                    row.Add(property);
+                }
+                rows.Add(row);
+                return rows;
+                }
+
+
+            // json type -> array
+            foreach (var jsonObj in jsonDoc.RootElement.EnumerateArray()) {
+                    if (jsonObj.ValueKind == JsonValueKind.Object)
+                    {       
+                        List<string> row = new();
+   
+                        foreach (string header in headers) {
+                            string property = jsonObj.GetProperty(header).ToString();
+                            row.Add(property);                        
+                        }
+
+                    rows.Add(row);
+                }                
+            }
+        }
+        return rows;
+    }
+
 
     public static void Main(string[] args) {
         Console.Write("Current Directory: ");
@@ -86,9 +145,16 @@ class Program {
             Console.WriteLine(fileContent);
 
 
-            Console.WriteLine(getHeaders(fileContent));
+            var headers = getHeaders(fileContent);
+            var rows = createRows(headers, fileContent);
 
+            foreach(var row in rows) {
+                foreach(string prop in row) {
+                    Console.WriteLine(prop);
+                }
+            }
 
+            Console.WriteLine(rows);
             // TODO: before parsing check for any unsuporrted JSON
             // formats (nested objects/arrays, ...) and send an error message.
             //Console.WriteLine("---- Parsed JSON ----");
@@ -96,7 +162,6 @@ class Program {
 
 
             // Create a list of column names(headers)
-            
 
             //Console.WriteLine("---isRootAnArray---");
             //Console.WriteLine(isRootAnArray(fileContent));

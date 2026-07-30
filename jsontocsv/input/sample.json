@@ -1,5 +1,12 @@
-﻿{
-  "name": "Matt Murdock",
-  "heroName": "Daredevil",
-  "universe": "Earth 616"
-}
+﻿[
+  {
+    "name": "Matt Murdock",
+    "heroName": "Daredevil",
+    "universe": "Earth 616"
+  },
+  {
+    "name": "Peter Parker",
+    "heroName": "Spider-man",
+    "universe": "Earth 616"
+  }
+]
