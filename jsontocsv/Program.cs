@@ -96,13 +96,20 @@ class Program {
 
             // json type -> array
             foreach (var jsonObj in jsonDoc.RootElement.EnumerateArray()) {
-                    if (jsonObj.ValueKind == JsonValueKind.Object)
+                // TODO: handle special characters in CSV cells (commas, qoutes, line breaks)
+                if (jsonObj.ValueKind == JsonValueKind.Object)
                     {       
                         List<string> row = new();
    
                         foreach (string header in headers) {
-                            string property = jsonObj.GetProperty(header).ToString();
-                            row.Add(property);                        
+                            string value= jsonObj.GetProperty(header).ToString();
+                            // handle empty value
+                            if (String.IsNullOrEmpty(value)) {
+                                row.Add("");
+                            } else {
+                                row.Add(value);                        
+                            }
+
                         }
 
                     rows.Add(row);
