@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Reflection.PortableExecutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -6,17 +7,8 @@ class Program {
     
     public static string ReadJsonFile(string path) 
     {
-        // read the entire file content of the JSON as a txt or string but not an actual JSON file.
-        var fileContent = File.ReadAllText(path);
-
-        if (fileContent == null || fileContent == "")
-        {
-            Console.WriteLine("JSON file is empty.");
-            return "";
-        }
-
-
-        return fileContent;
+        // read the entire file content of the JSON as a string but not an actual JSON file.
+        return File.ReadAllText(path);
     }
 
     public static JsonDocument ParseJsonIntoDocu(string jsonString) {
@@ -143,6 +135,61 @@ class Program {
         return rows;
     }
 
+    public static void DisplayCsv(List<string> headers, List<List<string>> rows) {
+        foreach(string header in headers) {
+            Console.Write(header + ", ");
+        }
+
+        Console.WriteLine();
+
+        foreach (var row in rows)
+        {
+            foreach (string prop in row)
+            {
+                Console.Write(prop + ", ");
+            }
+            Console.WriteLine();
+        }
+
+    }
+
+    public static string ConvertToCsvString(List<string> headers, List<List<string>> rows) {
+        // take the headers and rows and turn it into one big string that looks like a CSV file.
+        // Headers: ["name", "age", "city"]
+        //Rows:
+        //  [
+        //    ["john", "20", "tokyo"],
+        //    ["alice", "25", "seoul"]
+        //  ]
+
+        // headers
+        string headersString = "";
+        foreach (string header in headers) {
+            headersString += header +",";
+        }
+
+        headersString += "\n";
+
+        string rowsString = "";
+        // rows
+        foreach(var row in rows) {
+            foreach(string value in row) {
+                // if the value contains a comma (New York, USA) then wrapp it in qoutes ("New York, USA")
+                if (value.Contains(",") || value.Contains("\"")) {
+                    rowsString += $"\"{value}\"" + ",";
+                } else {
+                    rowsString += value + ",";
+                }
+
+            }
+            rowsString += "\n";
+        }
+
+        string csvString = String.Concat(headersString, rowsString);
+        Console.WriteLine(csvString);
+
+        return ""; 
+    }
 
     public static void Main(string[] args) {
         Console.Write("Current Directory: ");
@@ -169,22 +216,18 @@ class Program {
             string path = @"..\..\..\input\sample.json";
 
             string file = ReadJsonFile(path);
+
+            if (String.IsNullOrWhiteSpace(file)) {
+                Console.WriteLine("File is empty.");
+                return;
+            }
+
             using JsonDocument doc = ParseJsonIntoDocu(file);
             var headers = getHeaders(doc);
             var rows = createRows(headers, file);
 
-            int rowNumber = 0;
-            foreach(var row in rows) {
-                Console.Write("row " +  rowNumber + ": ");
-                foreach(string prop in row) {
-                    Console.Write(prop+ ", ");
-                }
+            ConvertToCsvString(headers, rows);
 
-                Console.WriteLine();
-                rowNumber++;
-            }
-
-            Console.WriteLine(rows);
             // TODO: before parsing check for any unsuporrted JSON
             // formats (nested objects/arrays, ...) and send an error message.
             //Console.WriteLine("---- Parsed JSON ----");
@@ -199,7 +242,9 @@ class Program {
             // Captures JSON formatting, depth limits, or conversion issues
             Console.WriteLine($"JSON invalid: {e.Message}"); 
             Console.WriteLine($"Path: {e.Path}");
+        } catch(FileNotFoundException e) {
+            Console.WriteLine($"File not found error: {e.Message}");
         }
-     }
+    }
 
 }
