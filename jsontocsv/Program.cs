@@ -1,17 +1,20 @@
 ﻿using System.Data;
 using System.Reflection.PortableExecutable;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-class Program {
-    
-    public static string ReadJsonFile(string path) 
+class Program
+{
+
+    public static string ReadJsonFile(string path)
     {
         // read the entire file content of the JSON as a string but not an actual JSON file.
         return File.ReadAllText(path);
     }
 
-    public static JsonDocument ParseJsonIntoDocu(string jsonString) {
+    public static JsonDocument ParseJsonIntoDocu(string jsonString)
+    {
         return JsonDocument.Parse(jsonString);
     }
 
@@ -28,14 +31,16 @@ class Program {
                 JsonElement root = jsonDom.RootElement;
 
                 // verify if the root is an array
-                if (root.ValueKind != JsonValueKind.Array) {
+                if (root.ValueKind != JsonValueKind.Array)
+                {
                     return false;
                 }
 
                 // check if all elements in the array are all objects
-                foreach (JsonElement element in root.EnumerateArray()) 
+                foreach (JsonElement element in root.EnumerateArray())
                 {
-                    if (element.ValueKind != JsonValueKind.Object) {
+                    if (element.ValueKind != JsonValueKind.Object)
+                    {
                         return false;
                     }
                 }
@@ -54,7 +59,8 @@ class Program {
         }
     }
 
-    public static List<string> getHeaders(JsonDocument json) {
+    public static List<string> getHeaders(JsonDocument json)
+    {
         // ! TODO: handle exceptions -> ArgumentOutOfRangeException, InvalidOperationException, others...
         // parse json into a JsonObject
         //JsonObject parsedJson = JsonNode.Parse(stringJson).AsObject();
@@ -64,79 +70,92 @@ class Program {
         // 2. Parse JSON into a readable object
         // 3. Get headers
 
-            var root = json.RootElement;
+        var root = json.RootElement;
 
-            // if the json file is just a single object {}
-            // then do:
-            if (root.ValueKind == JsonValueKind.Object) 
-            {
+        // if the json file is just a single object {}
+        // then do:
+        if (root.ValueKind == JsonValueKind.Object)
+        {
             // JsonNode.Parse -> converts a JSON string directly into a JsonObject, which allows to manipulate the data as a key-value pair collection.
             //JsonObject parsedJson = JsonDocument.Parse().AsObject();
             JsonObject? jsonObj = JsonObject.Create(root);
 
-                // iterate through to the json object and add its Key (headers)
-                
-                foreach (var property in jsonObj) {
-                    headers.Add(property.Key);
-                }
-                return headers;
-            }
+            // iterate through to the json object and add its Key (headers)
 
-            // suppose stringJson is an [] (array) of JSONs we get the first object's keys/headers
-            var firstObject = root[0]; // the first object from the array (root element)
-
-            // EnumerateObject() -> converts a JSON object into a searchable, loopable collection of key - value properties.
-            foreach (JsonProperty property in firstObject.EnumerateObject()) {
-                headers.Add(property.Name);
+            foreach (var property in jsonObj)
+            {
+                headers.Add(property.Key);
             }
+            return headers;
+        }
+
+        // suppose stringJson is an [] (array) of JSONs we get the first object's keys/headers
+        var firstObject = root[0]; // the first object from the array (root element)
+
+        // EnumerateObject() -> converts a JSON object into a searchable, loopable collection of key - value properties.
+        foreach (JsonProperty property in firstObject.EnumerateObject())
+        {
+            headers.Add(property.Name);
+        }
 
         return headers;
 
     }
 
-    public static List<List<string>>  createRows(List<string> headers, string stringJson) {
+    public static List<List<string>> createRows(List<string> headers, string stringJson)
+    {
         List<List<string>> rows = new();
-        using(var jsonDoc = JsonDocument.Parse(stringJson)) {
-            if (!isRootAnArray(stringJson)) {
+        using (var jsonDoc = JsonDocument.Parse(stringJson))
+        {
+            if (!isRootAnArray(stringJson))
+            {
                 var jsonObj = jsonDoc.RootElement;
                 List<string> row = new();
 
-                foreach (string header in headers) {
+                foreach (string header in headers)
+                {
                     string property = jsonObj.GetProperty(header).ToString();
                     row.Add(property);
                 }
                 rows.Add(row);
                 return rows;
-                }
+            }
 
 
             // json type -> array
-            foreach (var jsonObj in jsonDoc.RootElement.EnumerateArray()) {
+            foreach (var jsonObj in jsonDoc.RootElement.EnumerateArray())
+            {
                 // TODO: handle special characters in CSV cells (commas, qoutes, line breaks)
                 if (jsonObj.ValueKind == JsonValueKind.Object)
-                    {       
-                        List<string> row = new();
-   
-                        foreach (string header in headers) {
-                            string value= jsonObj.GetProperty(header).ToString();
-                            // handle empty value
-                            if (String.IsNullOrEmpty(value)) {
-                                row.Add("");
-                            } else {
-                                row.Add(value);                        
-                            }
+                {
+                    List<string> row = new();
 
+                    foreach (string header in headers)
+                    {
+                        string value = jsonObj.GetProperty(header).ToString();
+                        // handle empty value
+                        if (String.IsNullOrEmpty(value))
+                        {
+                            row.Add("");
+                        }
+                        else
+                        {
+                            row.Add(value);
                         }
 
+                    }
+
                     rows.Add(row);
-                }                
+                }
             }
         }
         return rows;
     }
 
-    public static void DisplayCsv(List<string> headers, List<List<string>> rows) {
-        foreach(string header in headers) {
+    public static void DisplayCsv(List<string> headers, List<List<string>> rows)
+    {
+        foreach (string header in headers)
+        {
             Console.Write(header + ", ");
         }
 
@@ -153,7 +172,8 @@ class Program {
 
     }
 
-    public static string ConvertToCsvString(List<string> headers, List<List<string>> rows) {
+    public static string ConvertToCsvString(List<string> headers, List<List<string>> rows)
+    {
         // take the headers and rows and turn it into one big string that looks like a CSV file.
         // Headers: ["name", "age", "city"]
         //Rows:
@@ -163,40 +183,56 @@ class Program {
         //  ]
 
         // headers
-        string headersString = "";
-        foreach (string header in headers) {
-            headersString += header +",";
-        }
+        var csvData = new StringBuilder();
 
-        headersString += "\n";
+        // join the headers with a comma -> name,age,city
+        string _headers = String.Join(',', headers);
 
-        string rowsString = "";
+        // append first the headers cuz we need it at the top
+        csvData.AppendLine(_headers);
+
         // rows
-        foreach(var row in rows) {
-            foreach(string value in row) {
-                // if the value contains a comma (New York, USA) then wrapp it in qoutes ("New York, USA")
-                if (value.Contains(",") || value.Contains("\"")) {
-                    rowsString += $"\"{value}\"" + ",";
-                } else {
-                    rowsString += value + ",";
+        foreach (var row in rows)
+        {
+            List<string> temp = new(); // store the values inside an array so we can join it later by a comma
+
+            foreach (string value in row)
+            {
+                if (value.Contains(",") || value.Contains("\""))
+                {
+                    // if the value contains a comma (New York, USA) then wrapp it in qoutes ("New York, USA")
+                    // OR if it had qoutes inside it ("Matt "Daredevil" Murdock")
+                    temp.Add($"\"{value}\"");
+                }
+                else
+                {
+                    // if the value is just a plain text with no especial chars then just add it directly.
+                    temp.Add(value);
                 }
 
+
             }
-            rowsString += "\n";
+
+            string data = String.Join(",", temp); // joins the row with a comma
+            csvData.AppendLine(data); // append the joined data to our stringbuilder
+
         }
 
-        string csvString = String.Concat(headersString, rowsString);
-        Console.WriteLine(csvString);
-
-        return ""; 
+        // have to call .ToString() on a StringBuilder 
+        // because it is not a string type, it is a 
+        // custom internal buffer optimized for memory manipulation
+        string finalStringCsv = csvData.ToString();
+        Console.WriteLine(finalStringCsv);
+        return finalStringCsv;
     }
 
-    public static void Main(string[] args) {
+    public static void Main(string[] args)
+    {
         Console.Write("Current Directory: ");
         Console.Write(Directory.GetCurrentDirectory());
         Console.WriteLine();
-      
-  
+
+
         try
         {
             // parsing JSON,
@@ -209,15 +245,16 @@ class Program {
 
             // print out contents
             //Console.WriteLine(fileContent
-            
+
             // if directory is jsontocsv/jsontocsv then input/sample.json filepath would work cuz its inside the directory,
             // but if the directory comes from /bin/Debug/... then it means were running from inside the bin/ and we'll need 
             // to go up three directories to reach the input/ file : ..\..\..\
-            string path = @"..\..\..\input\sample.json";
+            string path = @".\input\sample.json";
 
             string file = ReadJsonFile(path);
 
-            if (String.IsNullOrWhiteSpace(file)) {
+            if (String.IsNullOrWhiteSpace(file))
+            {
                 Console.WriteLine("File is empty.");
                 return;
             }
@@ -238,11 +275,15 @@ class Program {
 
             //Console.WriteLine("---isRootAnArray---");
             //Console.WriteLine(isRootAnArray(fileContent));
-        } catch(JsonException e) {
+        }
+        catch (JsonException e)
+        {
             // Captures JSON formatting, depth limits, or conversion issues
-            Console.WriteLine($"JSON invalid: {e.Message}"); 
+            Console.WriteLine($"JSON invalid: {e.Message}");
             Console.WriteLine($"Path: {e.Path}");
-        } catch(FileNotFoundException e) {
+        }
+        catch (FileNotFoundException e)
+        {
             Console.WriteLine($"File not found error: {e.Message}");
         }
     }
