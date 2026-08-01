@@ -3,6 +3,26 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 
 class Program {
+    
+    public static string ReadJsonFile(string path) 
+    {
+        // read the entire file content of the JSON as a txt or string but not an actual JSON file.
+        var fileContent = File.ReadAllText(path);
+
+        if (fileContent == null || fileContent == "")
+        {
+            Console.WriteLine("JSON file is empty.");
+            return "";
+        }
+
+
+        return fileContent;
+    }
+
+    public static JsonDocument ParseJsonIntoDocu(string jsonString) {
+        return JsonDocument.Parse(jsonString);
+    }
+
     public static bool isRootAnArray(string json)
     {
         try
@@ -42,24 +62,29 @@ class Program {
         }
     }
 
-    public static List<string> getHeaders(string stringJson) {
+    public static List<string> getHeaders(JsonDocument json) {
         // ! TODO: handle exceptions -> ArgumentOutOfRangeException, InvalidOperationException, others...
         // parse json into a JsonObject
         //JsonObject parsedJson = JsonNode.Parse(stringJson).AsObject();
         List<string> headers = new List<string> { };
 
-        using (JsonDocument jsonDom = JsonDocument.Parse(stringJson)) {
-            var root = jsonDom.RootElement;
+        // 1. Read JSON file
+        // 2. Parse JSON into a readable object
+        // 3. Get headers
+
+            var root = json.RootElement;
 
             // if the json file is just a single object {}
             // then do:
             if (root.ValueKind == JsonValueKind.Object) 
             {
-                // JsonNode.Parse -> converts a JSON string directly into a JsonObject, which allows to manipulate the data as a key-value pair collection.
-                JsonObject parsedJson = JsonNode.Parse(stringJson).AsObject();
+            // JsonNode.Parse -> converts a JSON string directly into a JsonObject, which allows to manipulate the data as a key-value pair collection.
+            //JsonObject parsedJson = JsonDocument.Parse().AsObject();
+            JsonObject? jsonObj = JsonObject.Create(root);
 
                 // iterate through to the json object and add its Key (headers)
-                foreach (var property in parsedJson) {
+                
+                foreach (var property in jsonObj) {
                     headers.Add(property.Key);
                 }
                 return headers;
@@ -73,7 +98,6 @@ class Program {
                 headers.Add(property.Name);
             }
 
-        }
         return headers;
 
     }
@@ -124,20 +148,8 @@ class Program {
         Console.Write("Current Directory: ");
         Console.Write(Directory.GetCurrentDirectory());
         Console.WriteLine();
-        // if directory is jsontocsv/jsontocsv then input/sample.json filepath would work cuz its inside the directory,
-        // but if the directory comes from /bin/Debug/... then it means were running from inside the bin/ and we'll need 
-        // to go up three directories to reach the input/ file : ..\..\..\
-        string filePath = @"..\..\..\input\sample.json";
-
-        // read the entire file content of the JSON as a txt or string but not an actual JSON file.
-        var fileContent = File.ReadAllText(filePath);
-
-        if (fileContent == null || fileContent == "")
-        {
-            Console.WriteLine("JSON file is empty.");
-            return;
-        }
-
+      
+  
         try
         {
             // parsing JSON,
@@ -149,16 +161,27 @@ class Program {
             //var parsedJson = JsonNode.Parse(fileContent).AsObject();
 
             // print out contents
-            Console.WriteLine(fileContent);
+            //Console.WriteLine(fileContent
+            
+            // if directory is jsontocsv/jsontocsv then input/sample.json filepath would work cuz its inside the directory,
+            // but if the directory comes from /bin/Debug/... then it means were running from inside the bin/ and we'll need 
+            // to go up three directories to reach the input/ file : ..\..\..\
+            string path = @"..\..\..\input\sample.json";
 
+            string file = ReadJsonFile(path);
+            using JsonDocument doc = ParseJsonIntoDocu(file);
+            var headers = getHeaders(doc);
+            var rows = createRows(headers, file);
 
-            var headers = getHeaders(fileContent);
-            var rows = createRows(headers, fileContent);
-
+            int rowNumber = 0;
             foreach(var row in rows) {
+                Console.Write("row " +  rowNumber + ": ");
                 foreach(string prop in row) {
-                    Console.WriteLine(prop);
+                    Console.Write(prop+ ", ");
                 }
+
+                Console.WriteLine();
+                rowNumber++;
             }
 
             Console.WriteLine(rows);
