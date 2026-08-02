@@ -232,7 +232,6 @@ class Program
     {
         // write the csv string to output/result.csv,
         // if name already exists then name_2 -> name_3 -> ...
-
         string fileName = "result.csv";
         string folder = @".\output";
         string path = Path.Combine(folder, fileName);
@@ -244,10 +243,15 @@ class Program
                 Directory.CreateDirectory(folder);
             }
 
+
             string csvString = ConvertToCsvString();
 
-            File.WriteAllText(path, csvString, Encoding.UTF8);
+            // ! TODO: change the filename if the it already exists.  
 
+            // File.WriteAllText is a built-in static method in C# (System.IO) used to create a new file, 
+            // write a string to it, and automatically close the file. 
+            // if the target file already exists, the method overwrites its contents
+            File.WriteAllText(path, csvString, Encoding.UTF8);
         }
         catch (Exception e)
         {
@@ -263,19 +267,18 @@ class Program
         Console.Write(Directory.GetCurrentDirectory());
         Console.WriteLine();
 
-
         try
         {
             // parsing JSON,
             // i misunderstood these methods so im commenting it out.
-            //  1. JsonNode.Parse converts a JSON string into a mutable, readable DOM object.
-            //  2. JsonSerializer.Serialize converts a C# object into a JSON string
+            // 1. JsonNode.Parse converts a JSON string into a mutable, readable DOM object.
+            // 2. JsonSerializer.Serialize converts a C# object into a JSON string
 
             //var serialized = JsonSerializer.Serialize(fileContent);
             //var parsedJson = JsonNode.Parse(fileContent).AsObject();
 
             // print out contents
-            //Console.WriteLine(fileContent
+            // Console.WriteLine(fileContent
 
             // if directory is jsontocsv/jsontocsv then input/sample.json filepath would work cuz its inside the directory,
             // but if the directory comes from /bin/Debug/... then it means were running from inside the bin/ and we'll need 
@@ -292,9 +295,11 @@ class Program
 
             using JsonDocument doc = ParseJsonIntoDocu(stringJson);
 
+            // add contents to `Headers` -> ["heade1", "header2", ...]
             getHeaders(doc);
+            // add contents to `Rows` -> [ ["row1", ...], ["row2", ...] ]
             createRows(stringJson);
-
+            // saves csv results to /output/result.csv 
             SaveCsvFile();
 
             // TODO: before parsing check for any unsuporrted JSON
