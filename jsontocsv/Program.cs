@@ -7,6 +7,9 @@ using System.Text.Json.Nodes;
 class Program
 {
 
+    public static List<string> Headers { get; set; } = new List<string>();
+    public static List<List<string>> Rows { get; set; } = new List<List<string>>();
+
     public static string ReadJsonFile(string path)
     {
         // read the entire file content of the JSON as a string but not an actual JSON file.
@@ -59,16 +62,15 @@ class Program
         }
     }
 
-    public static List<string> getHeaders(JsonDocument json)
+    public static void getHeaders(JsonDocument json)
     {
         // ! TODO: handle exceptions -> ArgumentOutOfRangeException, InvalidOperationException, others...
         // parse json into a JsonObject
         //JsonObject parsedJson = JsonNode.Parse(stringJson).AsObject();
-        List<string> headers = new List<string> { };
 
         // 1. Read JSON file
         // 2. Parse JSON into a readable object
-        // 3. Get headers
+        // 3. Get Headers
 
         var root = json.RootElement;
 
@@ -78,33 +80,32 @@ class Program
         {
             // JsonNode.Parse -> converts a JSON string directly into a JsonObject, which allows to manipulate the data as a key-value pair collection.
             //JsonObject parsedJson = JsonDocument.Parse().AsObject();
-            JsonObject? jsonObj = JsonObject.Create(root);
+            JsonObject jsonObj = JsonObject.Create(root);
 
-            // iterate through to the json object and add its Key (headers)
+            // iterate through to the json object and add its Key (Headers)
 
             foreach (var property in jsonObj)
             {
-                headers.Add(property.Key);
+                Headers.Add(property.Key);
             }
-            return headers;
         }
-
-        // suppose stringJson is an [] (array) of JSONs we get the first object's keys/headers
-        var firstObject = root[0]; // the first object from the array (root element)
-
-        // EnumerateObject() -> converts a JSON object into a searchable, loopable collection of key - value properties.
-        foreach (JsonProperty property in firstObject.EnumerateObject())
+        else
         {
-            headers.Add(property.Name);
-        }
+            // suppose stringJson is an [] (array) of JSONs we get the first object's keys/Headers
+            var firstObject = root[0]; // the first object from the array (root element)
 
-        return headers;
+            // EnumerateObject() -> converts a JSON object into a searchable, loopable collection of key - value properties.
+            foreach (JsonProperty property in firstObject.EnumerateObject())
+            {
+                Headers.Add(property.Name);
+            }
+
+        }
 
     }
 
-    public static List<List<string>> createRows(List<string> headers, string stringJson)
+    public static void createRows(string stringJson)
     {
-        List<List<string>> rows = new();
         using (var jsonDoc = JsonDocument.Parse(stringJson))
         {
             if (!isRootAnArray(stringJson))
@@ -112,56 +113,58 @@ class Program
                 var jsonObj = jsonDoc.RootElement;
                 List<string> row = new();
 
-                foreach (string header in headers)
+                foreach (string header in Headers)
                 {
                     string property = jsonObj.GetProperty(header).ToString();
                     row.Add(property);
                 }
-                rows.Add(row);
-                return rows;
+                Rows.Add(row);
             }
-
-
-            // json type -> array
-            foreach (var jsonObj in jsonDoc.RootElement.EnumerateArray())
+            else
             {
-                // TODO: handle special characters in CSV cells (commas, qoutes, line breaks)
-                if (jsonObj.ValueKind == JsonValueKind.Object)
+
+
+
+                // json type -> array
+                foreach (var jsonObj in jsonDoc.RootElement.EnumerateArray())
                 {
-                    List<string> row = new();
-
-                    foreach (string header in headers)
+                    // TODO: handle special characters in CSV cells (commas, qoutes, line breaks)
+                    if (jsonObj.ValueKind == JsonValueKind.Object)
                     {
-                        string value = jsonObj.GetProperty(header).ToString();
-                        // handle empty value
-                        if (String.IsNullOrEmpty(value))
+                        List<string> row = new();
+
+                        foreach (string header in Headers)
                         {
-                            row.Add("");
-                        }
-                        else
-                        {
-                            row.Add(value);
+                            string value = jsonObj.GetProperty(header).ToString();
+                            // handle empty value
+                            if (String.IsNullOrEmpty(value))
+                            {
+                                row.Add("");
+                            }
+                            else
+                            {
+                                row.Add(value);
+                            }
+
                         }
 
+                        Rows.Add(row);
                     }
-
-                    rows.Add(row);
                 }
             }
         }
-        return rows;
     }
 
-    public static void DisplayCsv(List<string> headers, List<List<string>> rows)
+    public static void DisplayCsv()
     {
-        foreach (string header in headers)
+        foreach (string header in Headers)
         {
             Console.Write(header + ", ");
         }
 
         Console.WriteLine();
 
-        foreach (var row in rows)
+        foreach (var row in Rows)
         {
             foreach (string prop in row)
             {
@@ -172,9 +175,9 @@ class Program
 
     }
 
-    public static string ConvertToCsvString(List<string> headers, List<List<string>> rows)
+    public static string ConvertToCsvString()
     {
-        // take the headers and rows and turn it into one big string that looks like a CSV file.
+        // take the Headers and Rows and turn it into one big string that looks like a CSV file.
         // Headers: ["name", "age", "city"]
         //Rows:
         //  [
@@ -182,17 +185,17 @@ class Program
         //    ["alice", "25", "seoul"]
         //  ]
 
-        // headers
+        // Headers
         var csvData = new StringBuilder();
 
-        // join the headers with a comma -> name,age,city
-        string _headers = String.Join(',', headers);
+        // join the Headers with a comma -> name,age,city
+        string _Headers = String.Join(',', Headers);
 
-        // append first the headers cuz we need it at the top
-        csvData.AppendLine(_headers);
+        // append first the Headers cuz we need it at the top
+        csvData.AppendLine(_Headers);
 
-        // rows
-        foreach (var row in rows)
+        // Rows
+        foreach (var row in Rows)
         {
             List<string> temp = new(); // store the values inside an array so we can join it later by a comma
 
@@ -210,7 +213,6 @@ class Program
                     temp.Add(value);
                 }
 
-
             }
 
             string data = String.Join(",", temp); // joins the row with a comma
@@ -224,6 +226,35 @@ class Program
         string finalStringCsv = csvData.ToString();
         Console.WriteLine(finalStringCsv);
         return finalStringCsv;
+    }
+
+    public static void SaveCsvFile()
+    {
+        // write the csv string to output/result.csv,
+        // if name already exists then name_2 -> name_3 -> ...
+
+        string fileName = "result.csv";
+        string folder = @".\output";
+        string path = Path.Combine(folder, fileName);
+        try
+        {
+            // check if the directory exists, if not then create directory 
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+            string csvString = ConvertToCsvString();
+
+            File.WriteAllText(path, csvString, Encoding.UTF8);
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+
+
     }
 
     public static void Main(string[] args)
@@ -251,19 +282,20 @@ class Program
             // to go up three directories to reach the input/ file : ..\..\..\
             string path = @".\input\sample.json";
 
-            string file = ReadJsonFile(path);
+            string stringJson = ReadJsonFile(path);
 
-            if (String.IsNullOrWhiteSpace(file))
+            if (String.IsNullOrWhiteSpace(stringJson))
             {
                 Console.WriteLine("File is empty.");
                 return;
             }
 
-            using JsonDocument doc = ParseJsonIntoDocu(file);
-            var headers = getHeaders(doc);
-            var rows = createRows(headers, file);
+            using JsonDocument doc = ParseJsonIntoDocu(stringJson);
 
-            ConvertToCsvString(headers, rows);
+            getHeaders(doc);
+            createRows(stringJson);
+
+            SaveCsvFile();
 
             // TODO: before parsing check for any unsuporrted JSON
             // formats (nested objects/arrays, ...) and send an error message.
@@ -271,7 +303,7 @@ class Program
             //Console.WriteLine(parsedJson);
 
 
-            // Create a list of column names(headers)
+            // Create a list of column names(Headers)
 
             //Console.WriteLine("---isRootAnArray---");
             //Console.WriteLine(isRootAnArray(fileContent));
