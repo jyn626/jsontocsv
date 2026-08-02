@@ -179,7 +179,7 @@ class Program
     {
         // take the Headers and Rows and turn it into one big string that looks like a CSV file.
         // Headers: ["name", "age", "city"]
-        //Rows:
+        // Rows:
         //  [
         //    ["john", "20", "tokyo"],
         //    ["alice", "25", "seoul"]
