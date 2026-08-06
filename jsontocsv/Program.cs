@@ -232,9 +232,9 @@ class Program
     {
         // write the csv string to output/result.csv,
         // if name already exists then name_2 -> name_3 -> ...
-        string fileName = "result.csv";
+        int fileCount = 0;
+        string fileName = $"result{fileCount}.csv";
         string folder = @".\output";
-        string path = Path.Combine(folder, fileName);
         try
         {
             // check if the directory exists, if not then create directory 
@@ -243,10 +243,23 @@ class Program
                 Directory.CreateDirectory(folder);
             }
 
+            // getting all files in the folder, and select only their name
+            var existingFiles = Directory.EnumerateFiles(folder)
+                                        // LINQ stuffs i should learn about 
+                                        // removes path: C:/folder/ouput/
+                                        .Select(Path.GetFileName);
 
+            // while the filename exists already keep generating a new one.
+            while (existingFiles.Contains(fileName))
+            {
+                fileCount++;
+                fileName = $"result{fileCount}.csv";
+            }
+
+            // form the complete path
+            string path = Path.Combine(folder, fileName);
+            // combines our headers and rows into a string 
             string csvString = ConvertToCsvString();
-
-            // ! TODO: change the filename if the it already exists.  
 
             // File.WriteAllText is a built-in static method in C# (System.IO) used to create a new file, 
             // write a string to it, and automatically close the file. 
