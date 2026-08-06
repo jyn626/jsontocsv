@@ -1,69 +1,42 @@
 ﻿using System.Data;
-using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Linq;
 
-class Program
+public static class FileReader
 {
-
-    public static List<string> Headers { get; set; } = new List<string>();
-    public static List<List<string>> Rows { get; set; } = new List<List<string>>();
-
-    public static string ReadJsonFile(string path)
-    {
-        // read the entire file content of the JSON as a string but not an actual JSON file.
-        return File.ReadAllText(path);
-    }
-
-    public static JsonDocument ParseJsonIntoDocu(string jsonString)
-    {
-        return JsonDocument.Parse(jsonString);
-    }
-
-    public static bool isRootAnArray(string json)
+    public static string Read(string path)
     {
         try
         {
-            //  `using` acts as a lifetime-limiting control structure ensuring
-            //  that the object's .Dispose() method is immediately triggered
-            //  the moment the code leaves that block
-            using (JsonDocument jsonDom = JsonDocument.Parse(json))
-            {
-                // get root of the json
-                JsonElement root = jsonDom.RootElement;
-
-                // verify if the root is an array
-                if (root.ValueKind != JsonValueKind.Array)
-                {
-                    return false;
-                }
-
-                // check if all elements in the array are all objects
-                foreach (JsonElement element in root.EnumerateArray())
-                {
-                    if (element.ValueKind != JsonValueKind.Object)
-                    {
-                        return false;
-                    }
-                }
-
-            }
-            // the JsonDocument library is automatically CLOSED
-            // and disposed right here, even if errors occur above.
-            return true;
-
+            return File.ReadAllText(path);
         }
-        catch (JsonException e)
+        catch (FileNotFoundException e)
         {
-            Console.WriteLine($"JSON invalid: {e.Message}");
-            Console.WriteLine($"Path: {e.Path}");
-            return false;
+            Console.WriteLine("File not found: " + e);
+            return "";
         }
     }
 
-    public static void getHeaders(JsonDocument json)
+    public static bool isEmpty(string content)
     {
+        if (String.IsNullOrWhiteSpace(content))
+        {
+            return true;
+        }
+        return false;
+    }
+}
+
+public static class TableBuilder
+{
+    public static List<string> Headers = new List<string>();
+    public static List<List<string>> Rows = new List<List<string>>();
+
+    public static List<string> getHeaders(JsonDocument json)
+    {
+        Headers.Clear();
         // ! TODO: handle exceptions -> ArgumentOutOfRangeException, InvalidOperationException, others...
         // parse json into a JsonObject
         //JsonObject parsedJson = JsonNode.Parse(stringJson).AsObject();
@@ -92,7 +65,7 @@ class Program
         else
         {
             // suppose stringJson is an [] (array) of JSONs we get the first object's keys/Headers
-            var firstObject = root[0]; // the first object from the array (root element)
+            var firstObject = root.EnumerateArray().First(); // the first object from the array (root element)
 
             // EnumerateObject() -> converts a JSON object into a searchable, loopable collection of key - value properties.
             foreach (JsonProperty property in firstObject.EnumerateObject())
@@ -102,18 +75,20 @@ class Program
 
         }
 
-    }
+        return Headers;
 
-    public static void createRows(string stringJson)
+    }
+    public static List<List<string>> createRows(string json)
     {
-        using (var jsonDoc = JsonDocument.Parse(stringJson))
+        Rows.Clear();
+        using (var jsonDoc = JsonDocument.Parse(json))
         {
-            if (!isRootAnArray(stringJson))
+            if (jsonDoc.RootElement.ValueKind != JsonValueKind.Array)
             {
                 var jsonObj = jsonDoc.RootElement;
                 List<string> row = new();
 
-                foreach (string header in Headers)
+                foreach (string header in TableBuilder.Headers)
                 {
                     string property = jsonObj.GetProperty(header).ToString();
                     row.Add(property);
@@ -122,9 +97,6 @@ class Program
             }
             else
             {
-
-
-
                 // json type -> array
                 foreach (var jsonObj in jsonDoc.RootElement.EnumerateArray())
                 {
@@ -153,18 +125,23 @@ class Program
                 }
             }
         }
-    }
 
+        return Rows;
+    }
+}
+
+public static class CsvFormatter
+{
     public static void DisplayCsv()
     {
-        foreach (string header in Headers)
+        foreach (string header in TableBuilder.Headers)
         {
             Console.Write(header + ", ");
         }
 
         Console.WriteLine();
 
-        foreach (var row in Rows)
+        foreach (var row in TableBuilder.Rows)
         {
             foreach (string prop in row)
             {
@@ -175,7 +152,7 @@ class Program
 
     }
 
-    public static string ConvertToCsvString()
+    public static string Format()
     {
         // take the Headers and Rows and turn it into one big string that looks like a CSV file.
         // Headers: ["name", "age", "city"]
@@ -189,13 +166,13 @@ class Program
         var csvData = new StringBuilder();
 
         // join the Headers with a comma -> name,age,city
-        string _Headers = String.Join(',', Headers);
+        string _Headers = String.Join(',', TableBuilder.Headers);
 
         // append first the Headers cuz we need it at the top
         csvData.AppendLine(_Headers);
 
         // Rows
-        foreach (var row in Rows)
+        foreach (var row in TableBuilder.Rows)
         {
             List<string> temp = new(); // store the values inside an array so we can join it later by a comma
 
@@ -224,11 +201,15 @@ class Program
         // because it is not a string type, it is a 
         // custom internal buffer optimized for memory manipulation
         string finalStringCsv = csvData.ToString();
-        Console.WriteLine(finalStringCsv);
+        // Console.WriteLine(finalStringCsv);
+
         return finalStringCsv;
     }
+}
 
-    public static void SaveCsvFile()
+public static class CsvWriter
+{
+    public static void WriteToDisk()
     {
         // write the csv string to output/result.csv,
         // if name already exists then name_2 -> name_3 -> ...
@@ -259,12 +240,15 @@ class Program
             // form the complete path
             string path = Path.Combine(folder, fileName);
             // combines our headers and rows into a string 
-            string csvString = ConvertToCsvString();
+            string csvString = CsvFormatter.Format();
 
             // File.WriteAllText is a built-in static method in C# (System.IO) used to create a new file, 
             // write a string to it, and automatically close the file. 
             // if the target file already exists, the method overwrites its contents
             File.WriteAllText(path, csvString, Encoding.UTF8);
+
+            // print the file path to find it quickly
+            Console.WriteLine(path);
         }
         catch (Exception e)
         {
@@ -273,7 +257,26 @@ class Program
 
 
     }
+}
 
+public static class JsonParser
+{
+    public static JsonDocument ParseJsonIntoDocu(string jsonString)
+    {
+        try
+        {
+            return JsonDocument.Parse(jsonString);
+        }
+        catch (JsonException e)
+        {
+            Console.WriteLine("JSON is invalid: " + e);
+            return null;
+        }
+    }
+}
+
+class Program
+{
     public static void Main(string[] args)
     {
         Console.Write("Current Directory: ");
@@ -298,22 +301,24 @@ class Program
             // to go up three directories to reach the input/ file : ..\..\..\
             string path = @".\input\sample.json";
 
-            string stringJson = ReadJsonFile(path);
+            // string stringJson = ReadJsonFile(path);
+            string stringJson = FileReader.Read(path);
 
-            if (String.IsNullOrWhiteSpace(stringJson))
+            if (FileReader.isEmpty(stringJson))
             {
                 Console.WriteLine("File is empty.");
                 return;
             }
 
-            using JsonDocument doc = ParseJsonIntoDocu(stringJson);
+            // using JsonDocument doc = ParseJsonIntoDocu(stringJson);
+            using JsonDocument doc = JsonParser.ParseJsonIntoDocu(stringJson);
 
             // add contents to `Headers` -> ["heade1", "header2", ...]
-            getHeaders(doc);
+            var headers = TableBuilder.getHeaders(doc);
             // add contents to `Rows` -> [ ["row1", ...], ["row2", ...] ]
-            createRows(stringJson);
+            var rows = TableBuilder.createRows(stringJson);
             // saves csv results to /output/result.csv 
-            SaveCsvFile();
+            CsvWriter.WriteToDisk();
 
             // TODO: before parsing check for any unsuporrted JSON
             // formats (nested objects/arrays, ...) and send an error message.
