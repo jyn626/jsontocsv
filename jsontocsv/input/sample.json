@@ -7,6 +7,6 @@
   {
     "name": "Peter Parker",
     "heroName": "Spider,  \"man\"",
-    "universe": "Earth 616"
+    "universe": [6, 1, 6]
   }
 ]

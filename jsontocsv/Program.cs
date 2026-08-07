@@ -4,19 +4,18 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Linq;
 
+
+public class NestedJsonException : Exception
+{
+    public NestedJsonException(string message) : base(message) { }
+}
+
+
 public static class FileReader
 {
     public static string Read(string path)
     {
-        try
-        {
-            return File.ReadAllText(path);
-        }
-        catch (FileNotFoundException e)
-        {
-            Console.WriteLine("File not found: " + e);
-            return "";
-        }
+        return File.ReadAllText(path);
     }
 
     public static bool isEmpty(string content)
@@ -216,46 +215,37 @@ public static class CsvWriter
         int fileCount = 0;
         string fileName = $"result{fileCount}.csv";
         string folder = @".\output";
-        try
+        // check if the directory exists, if not then create directory 
+        if (!Directory.Exists(folder))
         {
-            // check if the directory exists, if not then create directory 
-            if (!Directory.Exists(folder))
-            {
-                Directory.CreateDirectory(folder);
-            }
-
-            // getting all files in the folder, and select only their name
-            var existingFiles = Directory.EnumerateFiles(folder)
-                                        // LINQ stuffs i should learn about 
-                                        // removes path: C:/folder/ouput/
-                                        .Select(Path.GetFileName);
-
-            // while the filename exists already keep generating a new one.
-            while (existingFiles.Contains(fileName))
-            {
-                fileCount++;
-                fileName = $"result{fileCount}.csv";
-            }
-
-            // form the complete path
-            string path = Path.Combine(folder, fileName);
-            // combines our headers and rows into a string 
-            string csvString = CsvFormatter.Format();
-
-            // File.WriteAllText is a built-in static method in C# (System.IO) used to create a new file, 
-            // write a string to it, and automatically close the file. 
-            // if the target file already exists, the method overwrites its contents
-            File.WriteAllText(path, csvString, Encoding.UTF8);
-
-            // print the file path to find it quickly
-            Console.WriteLine(path);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
+            Directory.CreateDirectory(folder);
         }
 
+        // getting all files in the folder, and select only their name
+        var existingFiles = Directory.EnumerateFiles(folder)
+                                    // LINQ stuffs i should learn about 
+                                    // removes path: C:/folder/ouput/
+                                    .Select(Path.GetFileName);
 
+        // while the filename exists already keep generating a new one.
+        while (existingFiles.Contains(fileName))
+        {
+            fileCount++;
+            fileName = $"result{fileCount}.csv";
+        }
+
+        // form the complete path
+        string path = Path.Combine(folder, fileName);
+        // combines our headers and rows into a string 
+        string csvString = CsvFormatter.Format();
+
+        // File.WriteAllText is a built-in static method in C# (System.IO) used to create a new file, 
+        // write a string to it, and automatically close the file. 
+        // if the target file already exists, the method overwrites its contents
+        File.WriteAllText(path, csvString, Encoding.UTF8);
+
+        // print the file path to find it quickly
+        Console.WriteLine(path);
     }
 }
 
@@ -263,16 +253,33 @@ public static class JsonParser
 {
     public static JsonDocument ParseJsonIntoDocu(string jsonString)
     {
-        try
+        using JsonDocument jsonDoc = JsonDocument.Parse(jsonString);
+
+        // checl if it has a nested value
+        // if the json is an array of object then
+        if (jsonDoc.RootElement.ValueKind == JsonValueKind.Array)
         {
-            return JsonDocument.Parse(jsonString);
+            // loop through the objects
+            // -> [ {}, {}, {} ]
+            foreach (var property in jsonDoc.RootElement.EnumerateArray())
+            {
+                // loop through values of the objects
+                // -> {...}, {...}, {...}
+                foreach (var value in property.EnumerateObject())
+                {
+                    // check if any value is type object or type array, it means its nested
+                    // -> {val: {}} or {val: []}
+                    if (value.Value.ValueKind == JsonValueKind.Object || value.Value.ValueKind == JsonValueKind.Array)
+                    {
+                        // throw an error
+                        throw new NestedJsonException("The program does not support nested values.");
+                    }
+                }
+            }
         }
-        catch (JsonException e)
-        {
-            Console.WriteLine("JSON is invalid: " + e);
-            return null;
-        }
+        return jsonDoc;
     }
+
 }
 
 class Program
@@ -337,9 +344,17 @@ class Program
             Console.WriteLine($"JSON invalid: {e.Message}");
             Console.WriteLine($"Path: {e.Path}");
         }
+        catch (NestedJsonException e)
+        {
+            Console.WriteLine("JSON is invalid: " + e.Message);
+        }
         catch (FileNotFoundException e)
         {
-            Console.WriteLine($"File not found error: {e.Message}");
+            Console.WriteLine("Input File not found.");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
         }
     }
 
