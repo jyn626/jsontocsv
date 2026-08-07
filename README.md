@@ -1,5 +1,5 @@
 # JSONtoCSV 📝
-a simple program to convert a JSON file into CSV, made for learning purposes.
+a simple program that converts a JSON file into CSV. made for learning purposes.
 
 ## How to Use
 1. Place your JSON file in the input folder, and run the program.
