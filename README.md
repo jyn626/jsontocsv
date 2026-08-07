@@ -1,4 +1,4 @@
-# JSONtoCSV 𓊁
+# JSONtoCSV 📝
 a simple program to convert a JSON file into CSV, made for learning purposes.
 
 ## How to Use
